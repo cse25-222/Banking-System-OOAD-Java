@@ -1,4 +1,4 @@
-package bw.ac;
+package bw.ac.bank;
 
 import bw.ac.bank.view.BankingView;
 import javafx.application.Application;
