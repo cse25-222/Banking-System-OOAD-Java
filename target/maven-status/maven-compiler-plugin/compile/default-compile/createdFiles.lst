@@ -1,8 +1,8 @@
 bw\ac\bank\model\ChequeAccount.class
 bw\ac\bank\model\InvestmentAccount.class
-bw\ac\BankingApp.class
 bw\ac\bank\model\Account.class
 bw\ac\bank\view\BankingView.class
+bw\ac\bank\BankingApp.class
 bw\ac\bank\model\SavingsAccount.class
 bw\ac\bank\model\Transaction.class
 bw\ac\bank\model\Customer.class
