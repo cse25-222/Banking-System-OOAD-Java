@@ -20,6 +20,7 @@ public class BankingController {
         c.setFirstName(firstName.trim());
         c.setSurname(surname.trim());
         c.setEmail(email);
+        c.setEmployed(true); // for demo account assume all customers are employed
         customers.add(c);
         currentCustomer = c;
         return "Customer registered: " + c.getFullName();
