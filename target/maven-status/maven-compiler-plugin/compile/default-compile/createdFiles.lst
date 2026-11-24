@@ -8,6 +8,7 @@ bw\ac\bank\model\Customer.class
 bw\ac\bank\model\InterestBearing.class
 bw\ac\bank\controller\BankingController.class
 bw\ac\bank\dao\CustomerDAO.class
+bw\ac\bank\dao\CustomerDAOImpl.class
 bw\ac\bank\model\Account.class
 bw\ac\bank\dao\AccountDAO.class
 bw\ac\bank\view\BankingView.class
