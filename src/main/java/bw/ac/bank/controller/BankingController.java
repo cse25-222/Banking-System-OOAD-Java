@@ -1,16 +1,16 @@
 package bw.ac.bank.controller;
 
 import bw.ac.bank.dao.AccountDAO;
-import bw.ac.bank.dao.AccountDAOImpl;
 import bw.ac.bank.dao.CustomerDAO;
-import bw.ac.bank.dao.CustomerDAOImpl;
 import bw.ac.bank.dao.DatabaseManager;
 import bw.ac.bank.model.Account;
 import bw.ac.bank.model.ChequeAccount;
 import bw.ac.bank.model.Customer;
+import bw.ac.bank.model.InterestBearing;
 import bw.ac.bank.model.InvestmentAccount;
 import bw.ac.bank.model.SavingsAccount;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,139 +18,136 @@ public class BankingController {
 
     private List<Customer> customers = new ArrayList<>();
     private List<Account> accounts = new ArrayList<>();
+    private Customer currentCustomer;
+    private Account currentAccount;
 
-    private CustomerDAO customerDAO = new CustomerDAOImpl();
-    private AccountDAO accountDAO = new AccountDAOImpl();
+    private CustomerDAO customerDAO = createCustomerDAO();
+    private AccountDAO accountDAO = createAccountDAO();
+    private long nextCustomerId = 1;
+
+    private CustomerDAO createCustomerDAO() {
+        try {
+            Class<?> implementation = Class.forName("bw.ac.bank.dao.CustomerDAOImpl");
+            java.lang.reflect.Constructor<?> constructor = implementation.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return (CustomerDAO) constructor.newInstance();
+        } catch (ReflectiveOperationException | SecurityException e) {
+            throw new IllegalStateException("Unable to create customer DAO", e);
+        }
+    }
+
+    private AccountDAO createAccountDAO() {
+        try {
+            Class<?> implementation = Class.forName("bw.ac.bank.dao.AccountDAOImpl");
+            java.lang.reflect.Constructor<?> constructor = implementation.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return (AccountDAO) constructor.newInstance();
+        } catch (ReflectiveOperationException | SecurityException e) {
+            throw new IllegalStateException("Unable to create account DAO", e);
+        }
+    }
 
     public BankingController() {
         DatabaseManager.initDatabase();
-        // Load existing customers from DB so they are not lost on restart
         customers.addAll(customerDAO.findAll());
+        if (!customers.isEmpty()) {
+            nextCustomerId = customers.stream().mapToLong(Customer::getCustomerId).max().orElse(0) + 1;
+            currentCustomer = customers.get(customers.size() - 1);
+        }
     }
 
-    // --- CUSTOMER ---
-
-    public String registerCustomer(String fullName, String email) {
-        if (fullName == null || fullName.isBlank()) {
-            return "Error: Full name is required";
-        }
-        if (email == null || email.isBlank()) {
-            return "Error: Email is required";
-        }
-
-        String id = "CUST" + (customers.size() + 1);
-        Customer c = new Customer(id, fullName, email);
+    // Called by BankingView: registerCustomer(first, surname, email)
+    public String registerCustomer(String firstName, String surname, String email) {
+        if (firstName == null || firstName.isBlank()) return "Error: First name is required";
+        if (surname == null || surname.isBlank()) return "Error: Surname is required";
+        Customer c = new Customer(firstName.trim(), surname.trim(), "", email != null ? email.trim() : "");
+        c.setCustomerId(nextCustomerId++);
         customers.add(c);
+        currentCustomer = c;
         customerDAO.save(c);
-        return "Customer registered: " + fullName;
+        return "Customer registered: " + c.getFullName();
     }
 
-    // Overload for later - when we add Employer Name field
-    public String registerCustomer(String fullName, String email, boolean employed, String employerName) {
-        if (fullName == null || fullName.isBlank()) {
-            return "Error: Full name is required";
-        }
-        String id = "CUST" + (customers.size() + 1);
-        Customer c = new Customer(id, fullName, email);
-        c.setEmployed(employed);
-        c.setEmployerName(employerName);
-        customers.add(c);
-        customerDAO.save(c);
-        return "Customer registered: " + fullName;
-    }
-
-    public Customer findCustomerByName(String fullName) {
-        for (Customer c : customers) {
-            if (c.getFullName().equalsIgnoreCase(fullName.trim())) {
-                return c;
-            }
-        }
-        return null;
-    }
-
-    public List<Customer> getCustomers() {
-        return customers;
-    }
-
-    // --- ACCOUNT ---
-
-    public String openAccount(String accountNumber, String customerName, double openingBalance, String type) {
-        if (accountNumber == null || accountNumber.isBlank()) {
-            return "Error: Account number is required";
-        }
-        Customer customer = findCustomerByName(customerName);
-        if (customer == null) {
-            return "Error: Customer not found. Register customer first.";
-        }
-        if (openingBalance < 0) {
-            return "Error: Opening balance cannot be negative";
-        }
-
-        Account acc = null;
+    // Called by BankingView: openAccount(type, accountNumber, openingAmountString)
+    public String openAccount(String type, String accountNumber, String openingAmountStr) {
+        if (currentCustomer == null) return "Error: Register a customer first";
+        if (accountNumber == null || accountNumber.isBlank()) return "Error: Account number is required";
+        BigDecimal opening;
         try {
+            opening = new BigDecimal(openingAmountStr.trim());
+        } catch (Exception e) {
+            return "Error: Invalid opening amount: " + openingAmountStr;
+        }
+        try {
+            Account acc;
+            String branch = "Gaborone";
             if (type.equalsIgnoreCase("SAVINGS")) {
-                acc = new SavingsAccount(accountNumber, customer, openingBalance);
+                acc = new SavingsAccount(accountNumber.trim(), opening, branch, currentCustomer);
             } else if (type.equalsIgnoreCase("CHEQUE")) {
-                acc = new ChequeAccount(accountNumber, customer, openingBalance);
+                acc = new ChequeAccount(accountNumber.trim(), opening, branch, currentCustomer);
             } else if (type.equalsIgnoreCase("INVESTMENT")) {
-                acc = new InvestmentAccount(accountNumber, customer, openingBalance);
+                acc = new InvestmentAccount(accountNumber.trim(), opening, branch, currentCustomer);
             } else {
                 return "Error: Unknown account type: " + type;
             }
-        } catch (IllegalArgumentException e) {
-            return "Error: " + e.getMessage();
-        }
-
-        accounts.add(acc);
-        accountDAO.save(acc);
-        return "Account opened: " + type + " " + accountNumber + " Balance: BWP " + String.format("%.2f", acc.getBalance());
-    }
-
-    public Account findAccount(String accountNumber) {
-        for (Account a : accounts) {
-            if (a.getAccountNumber().equalsIgnoreCase(accountNumber.trim())) {
-                return a;
-            }
-        }
-        return null;
-    }
-
-    public List<Account> getAccounts() {
-        return accounts;
-    }
-
-    // --- TRANSACTIONS ---
-
-    public String deposit(String accountNumber, double amount) {
-        Account acc = findAccount(accountNumber);
-        if (acc == null) return "Error: Account not found";
-        try {
-            acc.deposit(amount);
+            accounts.add(acc);
+            currentCustomer.addAccount(acc);
+            currentAccount = acc;
             accountDAO.save(acc);
-            return "Deposited BWP " + String.format("%.2f", amount) + ". New balance: BWP " + String.format("%.2f", acc.getBalance());
+            return "Account opened: " + type + " " + accountNumber + " Balance: BWP " + acc.getBalance();
         } catch (IllegalArgumentException e) {
             return "Error: " + e.getMessage();
         }
     }
 
-    public String withdraw(String accountNumber, double amount) {
-        Account acc = findAccount(accountNumber);
-        if (acc == null) return "Error: Account not found";
+    // Called by BankingView: deposit(amountString) - uses last opened account
+    public String deposit(String amountStr) {
+        if (currentAccount == null) return "Error: Open an account first";
         try {
-            acc.withdraw(amount);
-            accountDAO.save(acc);
-            return "Withdrew BWP " + String.format("%.2f", amount) + ". New balance: BWP " + String.format("%.2f", acc.getBalance());
-        } catch (IllegalArgumentException e) {
+            BigDecimal amount = new BigDecimal(amountStr.trim());
+            currentAccount.deposit(amount);
+            accountDAO.save(currentAccount);
+            return "Deposited BWP " + amount + ". New balance: BWP " + currentAccount.getBalance();
+        } catch (Exception e) {
             return "Error: " + e.getMessage();
         }
     }
 
-    public String postInterest(String accountNumber) {
-        Account acc = findAccount(accountNumber);
-        if (acc == null) return "Error: Account not found";
-        double interest = acc.calculateInterest();
-        acc.deposit(interest);
-        accountDAO.save(acc);
-        return "Interest posted: BWP " + String.format("%.2f", interest) + ". New balance: BWP " + String.format("%.2f", acc.getBalance());
+    public String withdraw(String amountStr) {
+        if (currentAccount == null) return "Error: Open an account first";
+        try {
+            BigDecimal amount = new BigDecimal(amountStr.trim());
+            currentAccount.withdraw(amount);
+            accountDAO.save(currentAccount);
+            return "Withdrew BWP " + amount + ". New balance: BWP " + currentAccount.getBalance();
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
     }
+
+    // Called by BankingView: postInterest() - no args
+    public String postInterest() {
+        if (currentAccount == null) return "Error: Open an account first";
+        if (!(currentAccount instanceof InterestBearing)) {
+            return "Error: This account type does not earn interest";
+        }
+        try {
+            BigDecimal interest = ((InterestBearing) currentAccount).postMonthlyInterest();
+            accountDAO.save(currentAccount);
+            return "Interest posted: BWP " + interest + ". New balance: BWP " + currentAccount.getBalance();
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
+    }
+
+    // Called by BankingView after every action
+    public String getBalance() {
+        if (currentAccount == null) return "Balance: BWP 0.00";
+        return "Balance: BWP " + currentAccount.getBalance();
+    }
+
+    public List<Customer> getCustomers() { return customers; }
+    public List<Account> getAccounts() { return accounts; }
+    public Customer getCurrentCustomer() { return currentCustomer; }
+    public Account getCurrentAccount() { return currentAccount; }
 }
