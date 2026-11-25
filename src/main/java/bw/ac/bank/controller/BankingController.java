@@ -1,6 +1,7 @@
 package bw.ac.bank.controller;
 
 import bw.ac.bank.dao.AccountDAO;
+import bw.ac.bank.dao.AccountDAOImpl;
 import bw.ac.bank.dao.CustomerDAO;
 import bw.ac.bank.dao.CustomerDAOImpl;
 import bw.ac.bank.dao.DatabaseManager;
@@ -35,12 +36,10 @@ public class BankingController {
         }
     }
 
-    // Old version - kept for compatibility
     public String registerCustomer(String firstName, String surname, String email) {
         return registerCustomer(firstName, surname, "", email, false, "", "");
     }
 
-    // Full register with employment - called by new BankingView
     public String registerCustomer(String firstName, String surname, String address, String email, boolean employed, String employerName, String employerAddress) {
         if (firstName == null || firstName.isBlank()) return "Error: First name is required";
         if (surname == null || surname.isBlank()) return "Error: Surname is required";
@@ -55,7 +54,6 @@ public class BankingController {
         return "Customer registered: " + c.getFullName() + (employed ? " (Employed at " + employerName + ")" : "");
     }
 
-    // Called by BankingView: openAccount(type, accountNumber, openingAmountString)
     public String openAccount(String type, String accountNumber, String openingAmountStr) {
         if (currentCustomer == null) return "Error: Register a customer first";
         if (accountNumber == null || accountNumber.isBlank()) return "Error: Account number is required";
@@ -88,7 +86,6 @@ public class BankingController {
         }
     }
 
-    // Called by BankingView: deposit(amountString) - uses last opened account
     public String deposit(String amountStr) {
         if (currentAccount == null) return "Error: Open an account first";
         try {
@@ -113,7 +110,6 @@ public class BankingController {
         }
     }
 
-    // Called by BankingView: postInterest() - no args
     public String postInterest() {
         if (currentAccount == null) return "Error: Open an account first";
         if (!(currentAccount instanceof InterestBearing)) {
@@ -128,7 +124,6 @@ public class BankingController {
         }
     }
 
-    // Called by BankingView after every action
     public String getBalance() {
         if (currentAccount == null) return "Balance: BWP 0.00";
         return "Balance: BWP " + currentAccount.getBalance();
