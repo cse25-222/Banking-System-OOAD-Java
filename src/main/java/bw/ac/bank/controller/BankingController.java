@@ -2,6 +2,7 @@ package bw.ac.bank.controller;
 
 import bw.ac.bank.dao.AccountDAO;
 import bw.ac.bank.dao.CustomerDAO;
+import bw.ac.bank.dao.CustomerDAOImpl;
 import bw.ac.bank.dao.DatabaseManager;
 import bw.ac.bank.model.Account;
 import bw.ac.bank.model.ChequeAccount;
@@ -21,31 +22,9 @@ public class BankingController {
     private Customer currentCustomer;
     private Account currentAccount;
 
-    private CustomerDAO customerDAO = createCustomerDAO();
-    private AccountDAO accountDAO = createAccountDAO();
+    private CustomerDAO customerDAO = new CustomerDAOImpl();
+    private AccountDAO accountDAO = new AccountDAOImpl();
     private long nextCustomerId = 1;
-
-    private CustomerDAO createCustomerDAO() {
-        try {
-            Class<?> implementation = Class.forName("bw.ac.bank.dao.CustomerDAOImpl");
-            java.lang.reflect.Constructor<?> constructor = implementation.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            return (CustomerDAO) constructor.newInstance();
-        } catch (ReflectiveOperationException | SecurityException e) {
-            throw new IllegalStateException("Unable to create customer DAO", e);
-        }
-    }
-
-    private AccountDAO createAccountDAO() {
-        try {
-            Class<?> implementation = Class.forName("bw.ac.bank.dao.AccountDAOImpl");
-            java.lang.reflect.Constructor<?> constructor = implementation.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            return (AccountDAO) constructor.newInstance();
-        } catch (ReflectiveOperationException | SecurityException e) {
-            throw new IllegalStateException("Unable to create account DAO", e);
-        }
-    }
 
     public BankingController() {
         DatabaseManager.initDatabase();
@@ -56,22 +35,31 @@ public class BankingController {
         }
     }
 
-    // Called by BankingView: registerCustomer(first, surname, email)
+    // Old version - kept for compatibility
     public String registerCustomer(String firstName, String surname, String email) {
+        return registerCustomer(firstName, surname, "", email, false, "", "");
+    }
+
+    // Full register with employment - called by new BankingView
+    public String registerCustomer(String firstName, String surname, String address, String email, boolean employed, String employerName, String employerAddress) {
         if (firstName == null || firstName.isBlank()) return "Error: First name is required";
         if (surname == null || surname.isBlank()) return "Error: Surname is required";
-        Customer c = new Customer(firstName.trim(), surname.trim(), "", email != null ? email.trim() : "");
+        Customer c = new Customer(firstName.trim(), surname.trim(), address != null ? address.trim() : "", email != null ? email.trim() : "");
         c.setCustomerId(nextCustomerId++);
+        c.setEmployed(employed);
+        c.setEmployerName(employerName != null ? employerName.trim() : "");
+        c.setEmployerAddress(employerAddress != null ? employerAddress.trim() : "");
         customers.add(c);
         currentCustomer = c;
         customerDAO.save(c);
-        return "Customer registered: " + c.getFullName();
+        return "Customer registered: " + c.getFullName() + (employed ? " (Employed at " + employerName + ")" : "");
     }
 
     // Called by BankingView: openAccount(type, accountNumber, openingAmountString)
     public String openAccount(String type, String accountNumber, String openingAmountStr) {
         if (currentCustomer == null) return "Error: Register a customer first";
         if (accountNumber == null || accountNumber.isBlank()) return "Error: Account number is required";
+        if (openingAmountStr == null || openingAmountStr.isBlank()) return "Error: Opening amount is required";
         BigDecimal opening;
         try {
             opening = new BigDecimal(openingAmountStr.trim());

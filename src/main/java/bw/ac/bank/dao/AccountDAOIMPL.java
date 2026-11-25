@@ -5,7 +5,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-class AccountDAOImpl implements AccountDAO {
+public class AccountDAOImpl implements AccountDAO {
     @Override
     public void save(Account a) {
         String sql = "INSERT OR REPLACE INTO accounts(accountNumber, customerId, type, balance) VALUES(?,?,?,?)";

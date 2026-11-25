@@ -48,16 +48,29 @@ public class BankingView {
         customerNameField = new TextField();
         customerNameField.setPromptText("e.g. Kagiso Suping");
         emailField = new TextField();
+        emailField.setPromptText("e.g. kagiso@test.com");
+        TextField addressField = new TextField();
+        addressField.setPromptText("e.g. Gaborone");
+        CheckBox employedBox = new CheckBox("Employed");
+        TextField employerNameField = new TextField();
+        employerNameField.setPromptText("e.g. Bank of Botswana");
+        TextField employerAddressField = new TextField();
+        employerAddressField.setPromptText("e.g. CBD, Gaborone");
+
         Button registerBtn = new Button("Register Customer");
         registerBtn.setOnAction(e -> {
             String full = customerNameField.getText().trim();
             String first = full.contains(" ") ? full.substring(0, full.indexOf(" ")) : full;
             String surname = full.contains(" ") ? full.substring(full.indexOf(" ") + 1) : "";
-            showMessage(controller.registerCustomer(first, surname, emailField.getText()));
+            showMessage(controller.registerCustomer(first, surname, addressField.getText(), emailField.getText(), employedBox.isSelected(), employerNameField.getText(), employerAddressField.getText()));
         });
         grid.add(new Label("Full Name:"), 0, 0); grid.add(customerNameField, 1, 0);
         grid.add(new Label("Email:"), 0, 1); grid.add(emailField, 1, 1);
-        grid.add(registerBtn, 1, 2);
+        grid.add(new Label("Address:"), 0, 2); grid.add(addressField, 1, 2);
+        grid.add(employedBox, 1, 3);
+        grid.add(new Label("Employer Name:"), 0, 4); grid.add(employerNameField, 1, 4);
+        grid.add(new Label("Employer Address:"), 0, 5); grid.add(employerAddressField, 1, 5);
+        grid.add(registerBtn, 1, 6);
         return grid;
     }
 
