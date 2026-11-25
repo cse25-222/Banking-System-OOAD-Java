@@ -1,6 +1,7 @@
 package bw.ac.bank.view;
 
 import bw.ac.bank.controller.BankingController;
+import bw.ac.bank.model.Account;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -15,7 +16,9 @@ public class BankingView {
     private TextField amountField;
     private TextField openingAmountField;
     private ComboBox<String> accountTypeBox;
+    private ComboBox<String> accountSelectBox;
     private Label balanceLabel;
+    private Label currentAccountLabel;
 
     private BankingController controller = new BankingController();
 
@@ -34,12 +37,14 @@ public class BankingView {
         transactionPane.setExpanded(true);
 
         balanceLabel = new Label("Balance: BWP 0.00");
+        currentAccountLabel = new Label("No account selected");
+        currentAccountLabel.setStyle("-fx-font-weight: bold;");
         feedbackArea = new TextArea();
         feedbackArea.setEditable(false);
         feedbackArea.setPromptText("Messages will appear here...");
-        feedbackArea.setPrefHeight(120);
+        feedbackArea.setPrefHeight(140);
 
-        root.getChildren().addAll(title, customerPane, accountPane, transactionPane, balanceLabel, feedbackArea);
+        root.getChildren().addAll(title, customerPane, accountPane, transactionPane, currentAccountLabel, balanceLabel, feedbackArea);
     }
 
     private GridPane createCustomerForm() {
@@ -88,7 +93,8 @@ public class BankingView {
         openBtn.setOnAction(e -> {
             String result = controller.openAccount(accountTypeBox.getValue(), accountNumberField.getText(), openingAmountField.getText());
             showMessage(result);
-            balanceLabel.setText(controller.getBalance());
+            refreshAccountList();
+            updateLabels();
         });
         grid.add(new Label("Account Number:"), 0, 0); grid.add(accountNumberField, 1, 0);
         grid.add(new Label("Opening Amount:"), 0, 1); grid.add(openingAmountField, 1, 1);
@@ -102,25 +108,50 @@ public class BankingView {
         grid.setHgap(10); grid.setVgap(8); grid.setPadding(new Insets(10));
         amountField = new TextField();
         amountField.setPromptText("e.g. 1000.00");
+        accountSelectBox = new ComboBox<>();
+        accountSelectBox.setPromptText("Select account to use");
+        accountSelectBox.setOnAction(e -> {
+            if (accountSelectBox.getValue() != null) {
+                String accNo = accountSelectBox.getValue().split(" ")[1];
+                showMessage(controller.selectAccount(accNo));
+                updateLabels();
+            }
+        });
         Button depositBtn = new Button("Deposit");
         Button withdrawBtn = new Button("Withdraw");
         Button interestBtn = new Button("Post Monthly Interest");
         depositBtn.setOnAction(e -> {
             showMessage(controller.deposit(amountField.getText()));
-            balanceLabel.setText(controller.getBalance());
+            updateLabels();
         });
         withdrawBtn.setOnAction(e -> {
             showMessage(controller.withdraw(amountField.getText()));
-            balanceLabel.setText(controller.getBalance());
+            updateLabels();
         });
         interestBtn.setOnAction(e -> {
             showMessage(controller.postInterest());
-            balanceLabel.setText(controller.getBalance());
+            updateLabels();
         });
-        grid.add(new Label("Amount (BWP):"), 0, 0); grid.add(amountField, 1, 0);
-        grid.add(depositBtn, 0, 1); grid.add(withdrawBtn, 1, 1);
-        grid.add(interestBtn, 0, 2);
+        grid.add(new Label("Select Account:"), 0, 0); grid.add(accountSelectBox, 1, 0);
+        grid.add(new Label("Amount (BWP):"), 0, 1); grid.add(amountField, 1, 1);
+        grid.add(depositBtn, 0, 2); grid.add(withdrawBtn, 1, 2);
+        grid.add(interestBtn, 0, 3);
         return grid;
+    }
+
+    private void refreshAccountList() {
+        accountSelectBox.getItems().clear();
+        for (Account a : controller.getAccounts()) {
+            accountSelectBox.getItems().add(a.getAccountType() + " " + a.getAccountNumber());
+        }
+        if (controller.getCurrentAccount() != null) {
+            accountSelectBox.setValue(controller.getCurrentAccount().getAccountType() + " " + controller.getCurrentAccount().getAccountNumber());
+        }
+    }
+
+    private void updateLabels() {
+        balanceLabel.setText(controller.getBalance());
+        currentAccountLabel.setText(controller.getCurrentAccountLabel());
     }
 
     public void showMessage(String msg) {

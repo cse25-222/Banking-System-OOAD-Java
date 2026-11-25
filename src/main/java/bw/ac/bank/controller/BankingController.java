@@ -58,6 +58,12 @@ public class BankingController {
         if (currentCustomer == null) return "Error: Register a customer first";
         if (accountNumber == null || accountNumber.isBlank()) return "Error: Account number is required";
         if (openingAmountStr == null || openingAmountStr.isBlank()) return "Error: Opening amount is required";
+        String accNo = accountNumber.trim();
+        for (Account a : accounts) {
+            if (a.getAccountNumber().equalsIgnoreCase(accNo)) {
+                return "Error: Account number " + accNo + " already exists. Use a different number.";
+            }
+        }
         BigDecimal opening;
         try {
             opening = new BigDecimal(openingAmountStr.trim());
@@ -68,11 +74,11 @@ public class BankingController {
             Account acc;
             String branch = "Gaborone";
             if (type.equalsIgnoreCase("SAVINGS")) {
-                acc = new SavingsAccount(accountNumber.trim(), opening, branch, currentCustomer);
+                acc = new SavingsAccount(accNo, opening, branch, currentCustomer);
             } else if (type.equalsIgnoreCase("CHEQUE")) {
-                acc = new ChequeAccount(accountNumber.trim(), opening, branch, currentCustomer);
+                acc = new ChequeAccount(accNo, opening, branch, currentCustomer);
             } else if (type.equalsIgnoreCase("INVESTMENT")) {
-                acc = new InvestmentAccount(accountNumber.trim(), opening, branch, currentCustomer);
+                acc = new InvestmentAccount(accNo, opening, branch, currentCustomer);
             } else {
                 return "Error: Unknown account type: " + type;
             }
@@ -80,10 +86,21 @@ public class BankingController {
             currentCustomer.addAccount(acc);
             currentAccount = acc;
             accountDAO.save(acc);
-            return "Account opened: " + type + " " + accountNumber + " Balance: BWP " + acc.getBalance();
+            return "Account opened: " + type + " " + accNo + " Balance: BWP " + acc.getBalance();
         } catch (IllegalArgumentException e) {
             return "Error: " + e.getMessage();
         }
+    }
+
+    public String selectAccount(String accountNumber) {
+        if (accountNumber == null || accountNumber.isBlank()) return "Error: Select an account";
+        for (Account a : accounts) {
+            if (a.getAccountNumber().equalsIgnoreCase(accountNumber.trim())) {
+                currentAccount = a;
+                return "Selected: " + a.getAccountType() + " " + a.getAccountNumber() + " Balance: BWP " + a.getBalance();
+            }
+        }
+        return "Error: Account not found: " + accountNumber;
     }
 
     public String deposit(String amountStr) {
@@ -113,7 +130,7 @@ public class BankingController {
     public String postInterest() {
         if (currentAccount == null) return "Error: Open an account first";
         if (!(currentAccount instanceof InterestBearing)) {
-            return "Error: This account type does not earn interest";
+            return "Error: " + currentAccount.getAccountType() + " does not earn interest. Select a SAVINGS or INVESTMENT account.";
         }
         try {
             BigDecimal interest = ((InterestBearing) currentAccount).postMonthlyInterest();
@@ -127,6 +144,11 @@ public class BankingController {
     public String getBalance() {
         if (currentAccount == null) return "Balance: BWP 0.00";
         return "Balance: BWP " + currentAccount.getBalance();
+    }
+
+    public String getCurrentAccountLabel() {
+        if (currentAccount == null) return "No account selected";
+        return "Current: " + currentAccount.getAccountType() + " " + currentAccount.getAccountNumber();
     }
 
     public List<Customer> getCustomers() { return customers; }
