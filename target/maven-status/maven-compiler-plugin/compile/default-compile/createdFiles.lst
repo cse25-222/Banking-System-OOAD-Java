@@ -16,3 +16,4 @@ bw\ac\bank\dao\AccountDAO.class
 bw\ac\bank\view\BankingView.class
 bw\ac\bank\model\SavingsAccount.class
 bw\ac\bank\model\Branch.class
+bw\ac\bank\view\LoginView.class
