@@ -1,4 +1,4 @@
-﻿package bw.ac.bank.view;
+package bw.ac.bank.view;
 
 import bw.ac.bank.controller.LoginController;
 import javafx.geometry.Insets;
