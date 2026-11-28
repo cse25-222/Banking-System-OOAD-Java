@@ -1,17 +1,25 @@
 package bw.ac.bank;
 
-import bw.ac.bank.view.BankingView;
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 public class BankingApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        BankingView view = new BankingView();
-        Scene scene = new Scene(view.getView(), 800, 600);
-        primaryStage.setTitle("Banking System - Kagiso Suping cse25-222");
+        Label loginLabel = new Label("Banking System Login");
+
+        StackPane root = new StackPane(loginLabel);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(20));
+
+        Scene scene = new Scene(root, 450, 350);
+        primaryStage.setTitle("Banking System - Login");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
